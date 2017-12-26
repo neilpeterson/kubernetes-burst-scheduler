@@ -1,5 +1,3 @@
-// https://github.com/squat/jupyter-operator/blob/9c7306f5cc37709275b7147b4fbb2863e829ef9a/pkg/k8sutil/pod.go
-
 package main
 
 import (
@@ -43,9 +41,12 @@ func newNodeBurstController(client *kubernetes.Clientset, podInformer informerco
 }
 
 // Run node burst controller
+// TODO - What is going on here, I have a channel but no go routine.
+// Is is here that is causing the unneciary initilization
+// Disect this function more closley
 func (c *nodeBurstController) Run(stop <-chan struct{}) {
 
-	log.Print("Waiting for cache sync")
+	log.Print("waiting for cache sync")
 
 	if !cache.WaitForCacheSync(stop, c.podListerSynced) {
 		log.Print("Timed out while waiting for cache")
@@ -61,7 +62,9 @@ func (c *nodeBurstController) onAdd(obj interface{}) {
 	// log.Printf("onAdd: %v", key)
 	pods, _ := c.getPods()
 
-	calculateBurst(pods)
+	// FOR TEST - Added a reciever function and calling it here.
+	// Not sure if I need to pass the c struct
+	c.calculateBurst(pods)
 }
 
 // Returns a slice of pods with custom scheduler and no assignment
@@ -79,15 +82,16 @@ func (c *nodeBurstController) getPods() ([]*v1.Pod, error) {
 	return pods, nil
 }
 
-// Calculate pod / node placement
-func calculateBurst(pods []*v1.Pod) {
+// Scheduler Calculation - TODO - do I need the recieve here?
+func (c *nodeBurstController) calculateBurst(pods []*v1.Pod) {
 
-	// Used to store app labels for calculation
-	// Using a map here instead of slice of strings for ease of content validation
+	// Store app labels for calculation
 	appLabel := map[string]bool{}
 
-	// Check map for exsistance of app label
-	// If it has not been added, add it
+	toSchedule := 0
+	allreadyScheduled := 0
+
+	// Add app label to map if not exsist
 	for _, p := range pods {
 		if appLabel[p.GetLabels()["app"]] {
 
@@ -95,14 +99,27 @@ func calculateBurst(pods []*v1.Pod) {
 			appLabel[p.GetLabels()["app"]] = true
 		}
 
-		// Print out the map / debugging
-		for m := range appLabel {
-			log.Println(m)
+		// Filter pods on app label TODO - how to use label selector
+		filterPODS, _ := c.podLister.Pods("").List(labels.Everything())
+
+		// Calculate allready scheduled, and need to schedule
+		for _, pod := range filterPODS {
+			if appLabel[pod.GetLabels()["app"]] {
+				if pod.Status.Phase == "Pending" {
+					// Incriment to Schedule
+					log.Println("To Schedule")
+					toSchedule++
+				} else {
+					// Incriment scheduled
+					log.Println("Allready Schedule")
+					allreadyScheduled++
+				}
+			}
 		}
 	}
 }
 
 // Schedule pods
 func schedulePods() {
-
+	// Scheudle PODS
 }
