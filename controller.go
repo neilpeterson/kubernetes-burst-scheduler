@@ -1,3 +1,7 @@
+// BIG TODO ITEMS
+// SCHEDULE POD
+// FIGURE OUT CACHE INITIALIZATION ISSUE / MISSING GO ROUTINE
+
 package main
 
 import (
@@ -52,7 +56,9 @@ func (c *nodeBurstController) Run(stop <-chan struct{}) {
 		log.Print("Timed out while waiting for cache")
 		return
 	}
+	log.Println("Caches are synced")
 
+	log.Print("Waiting for stop singnal")
 	<-stop
 	log.Print("Recieved stop singnal")
 }
@@ -108,7 +114,11 @@ func (c *nodeBurstController) calculateBurst(pods []*v1.Pod) {
 				if pod.Status.Phase == "Pending" {
 					// Incriment to Schedule
 					log.Println("To Schedule")
+					// s := fmt.Sprintf("%v", toSchedule)
+					// log.Println(s)
 					toSchedule++
+					// p := fmt.Sprintf("%v", toSchedule)
+					// log.Println(p)
 				} else {
 					// Incriment scheduled
 					log.Println("Allready Schedule")
