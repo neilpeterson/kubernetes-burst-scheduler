@@ -1,6 +1,6 @@
-// BIG TODO ITEMS
-// SCHEDULE POD
-// FIGURE OUT CACHE INITIALIZATION ISSUE / MISSING GO ROUTINE
+// TODO1 - Complete scheduling
+// TODO2 - Figure out cache sync / missing go routine
+// TODO3 - Figure out incorect pod integer / incorect ammount
 
 package main
 
@@ -17,8 +17,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+var burstValue = 2
+
 type nodeBurstController struct {
-	podInterface    corev1.PodInterface
 	podGetter       corev1.PodsGetter
 	podLister       listercorev1.PodLister
 	podListerSynced cache.InformerSynced
@@ -45,9 +46,7 @@ func newNodeBurstController(client *kubernetes.Clientset, podInformer informerco
 }
 
 // Run node burst controller
-// TODO - What is going on here, I have a channel but no go routine.
-// Is is here that is causing the unneciary initilization
-// Disect this function more closley
+// TODO2 - Figure out cache sync / missing go routine
 func (c *nodeBurstController) Run(stop <-chan struct{}) {
 
 	log.Print("waiting for cache sync")
@@ -64,13 +63,18 @@ func (c *nodeBurstController) Run(stop <-chan struct{}) {
 }
 
 func (c *nodeBurstController) onAdd(obj interface{}) {
-	// key, _ := cache.MetaNamespaceKeyFunc(obj)
-	// log.Printf("onAdd: %v", key)
+
+	// Get pods using custom scheduler.
 	pods, _ := c.getPods()
 
-	// FOR TEST - Added a reciever function and calling it here.
-	// Not sure if I need to pass the c struct
-	c.calculateBurst(pods)
+	// Get current state of pods (PendingSchedule vs. Scheduled).
+	psch, sch := c.getCurrentState(pods)
+
+	// Calcuate pod placement.
+	calculatePodPlacement(psch, sch, pods)
+
+	// Schedule pods on nodes.
+	// schedulePod("podName", "nodeName")
 }
 
 // Returns a slice of pods with custom scheduler and no assignment
@@ -88,14 +92,14 @@ func (c *nodeBurstController) getPods() ([]*v1.Pod, error) {
 	return pods, nil
 }
 
-// Scheduler Calculation - TODO - do I need the recieve here?
-func (c *nodeBurstController) calculateBurst(pods []*v1.Pod) {
+// Scheduler Calculation
+func (c *nodeBurstController) getCurrentState(pods []*v1.Pod) (int, int) {
 
 	// Store app labels for calculation
 	appLabel := map[string]bool{}
 
-	toSchedule := 0
-	allreadyScheduled := 0
+	PendingSchedule := 0
+	Scheduled := 0
 
 	// Add app label to map if not exsist
 	for _, p := range pods {
@@ -106,6 +110,7 @@ func (c *nodeBurstController) calculateBurst(pods []*v1.Pod) {
 		}
 
 		// Filter pods on app label TODO - how to use label selector
+		// TODO3 - Figure out incorect pod integer / incorect ammount
 		filterPODS, _ := c.podLister.Pods("").List(labels.Everything())
 
 		// Calculate allready scheduled, and need to schedule
@@ -114,22 +119,45 @@ func (c *nodeBurstController) calculateBurst(pods []*v1.Pod) {
 				if pod.Status.Phase == "Pending" {
 					// Incriment to Schedule
 					log.Println("To Schedule")
-					// s := fmt.Sprintf("%v", toSchedule)
-					// log.Println(s)
-					toSchedule++
-					// p := fmt.Sprintf("%v", toSchedule)
-					// log.Println(p)
+					PendingSchedule++
 				} else {
 					// Incriment scheduled
 					log.Println("Allready Schedule")
-					allreadyScheduled++
+					Scheduled++
 				}
 			}
 		}
 	}
+	return PendingSchedule, Scheduled
 }
 
-// Schedule pods
-func schedulePods() {
-	// Scheudle PODS
+func calculatePodPlacement(psch int, sch int, pod []*v1.Pod) {
+
+	// TODO1 - Complete scheduling
+	// Write equation
+
+	log.Println(psch)
+	log.Println(sch)
+
+	// Psudo Code
+	// Need to bring in a list of pods to schedule []pod.
+	// Perform calculatios
+	// Remove node from slice until slice is empty
+
+	// if psch(3) + sch(0) > burstvalue(2) {
+	// 	intNode(2) = burstValue(2) - sch(0)
+	// 	intBurst(1) = psch(3) - burstValue(2)
+	// 	Do while intNode(2) >= 0 {
+	// 		schedule node
+	// 		remove pod from slice - https://stackoverflow.com/questions/25025409/delete-element-in-a-slice
+	// 		-- intNode(1),(0)
+	// 	}
+
+	// 	do while intBurst(1) >= 0 {
+	// 		scheudle ACI
+	// 		remove pod from slice - https://stackoverflow.com/questions/25025409/delete-element-in-a-slice
+	// 		--intBurst(0)
+	// 	}
+	// }
+
 }
