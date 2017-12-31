@@ -1,6 +1,5 @@
-// BIG TODO ITEMS
-// SCHEDULE POD
-// FIGURE OUT CACHE INITIALIZATION ISSUE / MISSING GO ROUTINE
+// TODO1 - Complete scheduling
+// TODO2 - Figure out cache sync / missing go routine
 
 package main
 
@@ -17,8 +16,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+var burstValue = 2
+
 type nodeBurstController struct {
-	podInterface    corev1.PodInterface
 	podGetter       corev1.PodsGetter
 	podLister       listercorev1.PodLister
 	podListerSynced cache.InformerSynced
@@ -45,9 +45,7 @@ func newNodeBurstController(client *kubernetes.Clientset, podInformer informerco
 }
 
 // Run node burst controller
-// TODO - What is going on here, I have a channel but no go routine.
-// Is is here that is causing the unneciary initilization
-// Disect this function more closley
+// TODO2 - Figure out cache sync / missing go routine
 func (c *nodeBurstController) Run(stop <-chan struct{}) {
 
 	log.Print("waiting for cache sync")
@@ -64,13 +62,15 @@ func (c *nodeBurstController) Run(stop <-chan struct{}) {
 }
 
 func (c *nodeBurstController) onAdd(obj interface{}) {
-	// key, _ := cache.MetaNamespaceKeyFunc(obj)
-	// log.Printf("onAdd: %v", key)
+
+	// Get pods using custom scheduler.
 	pods, _ := c.getPods()
 
-	// FOR TEST - Added a reciever function and calling it here.
-	// Not sure if I need to pass the c struct
-	c.calculateBurst(pods)
+	// Get current state of pods (PendingSchedule vs. Scheduled).
+	psch, sch := c.getCurrentState(pods)
+
+	// Calcuate pod placement.
+	calculatePodPlacement(psch, sch, pods)
 }
 
 // Returns a slice of pods with custom scheduler and no assignment
@@ -84,18 +84,17 @@ func (c *nodeBurstController) getPods() ([]*v1.Pod, error) {
 			pods = append(pods, pod)
 		}
 	}
-
 	return pods, nil
 }
 
-// Scheduler Calculation - TODO - do I need the recieve here?
-func (c *nodeBurstController) calculateBurst(pods []*v1.Pod) {
+// Scheduler Calculation
+func (c *nodeBurstController) getCurrentState(pods []*v1.Pod) (int, int) {
 
 	// Store app labels for calculation
 	appLabel := map[string]bool{}
 
-	toSchedule := 0
-	allreadyScheduled := 0
+	PendingSchedule := 0
+	Scheduled := 0
 
 	// Add app label to map if not exsist
 	for _, p := range pods {
@@ -105,31 +104,38 @@ func (c *nodeBurstController) calculateBurst(pods []*v1.Pod) {
 			appLabel[p.GetLabels()["app"]] = true
 		}
 
-		// Filter pods on app label TODO - how to use label selector
-		filterPODS, _ := c.podLister.Pods("").List(labels.Everything())
-
 		// Calculate allready scheduled, and need to schedule
-		for _, pod := range filterPODS {
+		for _, pod := range pods {
 			if appLabel[pod.GetLabels()["app"]] {
 				if pod.Status.Phase == "Pending" {
-					// Incriment to Schedule
-					log.Println("To Schedule")
-					// s := fmt.Sprintf("%v", toSchedule)
-					// log.Println(s)
-					toSchedule++
-					// p := fmt.Sprintf("%v", toSchedule)
-					// log.Println(p)
+					PendingSchedule++
 				} else {
-					// Incriment scheduled
-					log.Println("Allready Schedule")
-					allreadyScheduled++
+					Scheduled++
 				}
 			}
 		}
 	}
+	return PendingSchedule, Scheduled
 }
 
-// Schedule pods
-func schedulePods() {
-	// Scheudle PODS
+func calculatePodPlacement(psch int, sch int, pods []*v1.Pod) {
+
+	newInt := 0
+
+	if sch < burstValue {
+		newInt = burstValue - sch
+
+		for _, pod := range pods {
+			log.Println(pod.GetName())
+			if newInt > 0 {
+				log.Println("Schedule on node..")
+				schedulePod(pod.GetName(), "aks-nodepool1-42032720-0")
+				newInt--
+			} else {
+				log.Println("Scheduleon ACI")
+				schedulePod(pod.GetName(), "virtual-kubelet-virtual-kublet-linux")
+				newInt--
+			}
+		}
+	}
 }
