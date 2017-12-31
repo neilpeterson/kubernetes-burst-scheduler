@@ -1,6 +1,5 @@
 // TODO1 - Complete scheduling
 // TODO2 - Figure out cache sync / missing go routine
-// TODO3 - Figure out incorect pod integer / incorect ammount
 
 package main
 
@@ -72,9 +71,6 @@ func (c *nodeBurstController) onAdd(obj interface{}) {
 
 	// Calcuate pod placement.
 	calculatePodPlacement(psch, sch, pods)
-
-	// Schedule pods on nodes.
-	// schedulePod("podName", "nodeName")
 }
 
 // Returns a slice of pods with custom scheduler and no assignment
@@ -88,7 +84,6 @@ func (c *nodeBurstController) getPods() ([]*v1.Pod, error) {
 			pods = append(pods, pod)
 		}
 	}
-
 	return pods, nil
 }
 
@@ -109,20 +104,12 @@ func (c *nodeBurstController) getCurrentState(pods []*v1.Pod) (int, int) {
 			appLabel[p.GetLabels()["app"]] = true
 		}
 
-		// Filter pods on app label TODO - how to use label selector
-		// TODO3 - Figure out incorect pod integer / incorect ammount
-		filterPODS, _ := c.podLister.Pods("").List(labels.Everything())
-
 		// Calculate allready scheduled, and need to schedule
-		for _, pod := range filterPODS {
+		for _, pod := range pods {
 			if appLabel[pod.GetLabels()["app"]] {
 				if pod.Status.Phase == "Pending" {
-					// Incriment to Schedule
-					log.Println("To Schedule")
 					PendingSchedule++
 				} else {
-					// Incriment scheduled
-					log.Println("Allready Schedule")
 					Scheduled++
 				}
 			}
@@ -131,33 +118,24 @@ func (c *nodeBurstController) getCurrentState(pods []*v1.Pod) (int, int) {
 	return PendingSchedule, Scheduled
 }
 
-func calculatePodPlacement(psch int, sch int, pod []*v1.Pod) {
+func calculatePodPlacement(psch int, sch int, pods []*v1.Pod) {
 
-	// TODO1 - Complete scheduling
-	// Write equation
+	newInt := 0
 
-	log.Println(psch)
-	log.Println(sch)
+	if sch < burstValue {
+		newInt = burstValue - sch
 
-	// Psudo Code
-	// Need to bring in a list of pods to schedule []pod.
-	// Perform calculatios
-	// Remove node from slice until slice is empty
-
-	// if psch(3) + sch(0) > burstvalue(2) {
-	// 	intNode(2) = burstValue(2) - sch(0)
-	// 	intBurst(1) = psch(3) - burstValue(2)
-	// 	Do while intNode(2) >= 0 {
-	// 		schedule node
-	// 		remove pod from slice - https://stackoverflow.com/questions/25025409/delete-element-in-a-slice
-	// 		-- intNode(1),(0)
-	// 	}
-
-	// 	do while intBurst(1) >= 0 {
-	// 		scheudle ACI
-	// 		remove pod from slice - https://stackoverflow.com/questions/25025409/delete-element-in-a-slice
-	// 		--intBurst(0)
-	// 	}
-	// }
-
+		for _, pod := range pods {
+			log.Println(pod.GetName())
+			if newInt > 0 {
+				log.Println("Schedule on node..")
+				schedulePod(pod.GetName(), "aks-nodepool1-42032720-0")
+				newInt--
+			} else {
+				log.Println("Scheduleon ACI")
+				schedulePod(pod.GetName(), "virtual-kubelet-virtual-kublet-linux")
+				newInt--
+			}
+		}
+	}
 }
