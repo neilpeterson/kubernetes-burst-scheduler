@@ -1,10 +1,14 @@
-// TODO1 - Complete scheduling
-// TODO2 - Figure out cache sync / missing go routine
+// TODO - figure out config file /  environment variable
+// TODO - provide name for scheduler
+// TODO - updated schedule on node to use default scheduler
+// TODO - fix caching issue / mising go routine
+// TODO - somethign is looping through and rescheduling all pods on node
 
 package main
 
 import (
 	"log"
+	"time"
 
 	informercorev1 "k8s.io/client-go/informers/core/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -37,6 +41,7 @@ func newNodeBurstController(client *kubernetes.Clientset, podInformer informerco
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				c.onAdd(obj)
+				time.Sleep(2 * time.Second)
 			},
 		},
 	)
@@ -45,7 +50,6 @@ func newNodeBurstController(client *kubernetes.Clientset, podInformer informerco
 }
 
 // Run node burst controller
-// TODO2 - Figure out cache sync / missing go routine
 func (c *nodeBurstController) Run(stop <-chan struct{}) {
 
 	log.Print("waiting for cache sync")
@@ -63,13 +67,13 @@ func (c *nodeBurstController) Run(stop <-chan struct{}) {
 
 func (c *nodeBurstController) onAdd(obj interface{}) {
 
-	// Get pods using custom scheduler.
+	// Get pods assigned to custom scheduler.
 	pods, _ := c.getPods()
 
 	// Get current state of pods (PendingSchedule vs. Scheduled).
 	psch, sch := c.getCurrentState(pods)
 
-	// Calcuate pod placement.
+	// Calcuate pod placement and schedule.
 	calculatePodPlacement(psch, sch, pods)
 }
 
@@ -84,6 +88,7 @@ func (c *nodeBurstController) getPods() ([]*v1.Pod, error) {
 			pods = append(pods, pod)
 		}
 	}
+	log.Println(len(pods))
 	return pods, nil
 }
 
@@ -118,6 +123,7 @@ func (c *nodeBurstController) getCurrentState(pods []*v1.Pod) (int, int) {
 	return PendingSchedule, Scheduled
 }
 
+// Calculate placement and run function to schedule on node
 func calculatePodPlacement(psch int, sch int, pods []*v1.Pod) {
 
 	newInt := 0
@@ -132,8 +138,8 @@ func calculatePodPlacement(psch int, sch int, pods []*v1.Pod) {
 				schedulePod(pod.GetName(), "aks-nodepool1-42032720-0")
 				newInt--
 			} else {
-				log.Println("Scheduleon ACI")
-				schedulePod(pod.GetName(), "virtual-kubelet-virtual-kublet-linux")
+				log.Println("Schedule on burst node..")
+				schedulePod(pod.GetName(), "aks-nodepool1-42032720-2")
 				newInt--
 			}
 		}

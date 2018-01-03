@@ -45,9 +45,7 @@ func schedulePod(podName string, nodeName string) {
 		fmt.Println(err)
 	}
 
-	fmt.Println(string(body))
-
-	// HTTP Post
+	// HTTP Post to update node name.
 	url := "http://localhost:8001/api/v1/namespaces/default/pods/" + podName + "/binding"
 	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(body))
 	req.Header.Add("Content-Type", "application/json")

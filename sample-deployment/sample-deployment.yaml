@@ -1,0 +1,15 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: test-burst
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: test-burst
+    spec:
+      schedulerName: test-scheduler
+      containers:
+      - name: test-burst
+        image: nginx
