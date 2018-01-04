@@ -8,14 +8,17 @@ package main
 
 import (
 	"log"
+	"sync"
 	"time"
 
 	informercorev1 "k8s.io/client-go/informers/core/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	listercorev1 "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/util/workqueue"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 )
@@ -26,6 +29,7 @@ type nodeBurstController struct {
 	podGetter       corev1.PodsGetter
 	podLister       listercorev1.PodLister
 	podListerSynced cache.InformerSynced
+	queue           workqueue.RateLimitingInterface
 }
 
 // Node burst controller with an on add function
@@ -35,13 +39,16 @@ func newNodeBurstController(client *kubernetes.Clientset, podInformer informerco
 		podGetter:       client.CoreV1(),
 		podLister:       podInformer.Lister(),
 		podListerSynced: podInformer.Informer().HasSynced,
+		queue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "secretsync"),
 	}
 
 	podInformer.Informer().AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				c.onAdd(obj)
-				time.Sleep(2 * time.Second)
+				key, err := cache.MetaNamespaceKeyFunc(obj)
+				if err == nil {
+					c.queue.Add(key)
+				}
 			},
 		},
 	)
@@ -51,18 +58,63 @@ func newNodeBurstController(client *kubernetes.Clientset, podInformer informerco
 
 // Run node burst controller
 func (c *nodeBurstController) Run(stop <-chan struct{}) {
+	var wg sync.WaitGroup
+
+	// Stop queue and workers
+	defer func() {
+		log.Println("Shutting down queue.")
+		c.queue.ShutDown()
+
+		log.Println("Shutting down worker")
+		wg.Wait()
+
+		log.Println("Workers are all done.")
+	}()
 
 	log.Print("waiting for cache sync")
-
 	if !cache.WaitForCacheSync(stop, c.podListerSynced) {
 		log.Print("Timed out while waiting for cache")
 		return
 	}
 	log.Println("Caches are synced")
 
+	go func() {
+		wait.Until(c.runWorker, time.Second, stop)
+		wg.Done()
+	}()
+
 	log.Print("Waiting for stop singnal")
 	<-stop
 	log.Print("Recieved stop singnal")
+}
+
+func (c *nodeBurstController) runWorker() {
+	for c.processNextWorkItem() {
+	}
+}
+
+func (c *nodeBurstController) processNextWorkItem() bool {
+
+	// Pull work item from queue.
+	key, quit := c.queue.Get()
+	if quit {
+		return false
+	}
+	defer c.queue.Done(key)
+
+	// Do the work - THIS IS WHERE I AM NOW
+	err := c.processItem(key.(string))
+	if err == nil {
+		c.queue.Forget(key)
+		return true
+	}
+
+	return true
+}
+
+func (c *nodeBurstController) processItem(key string) error {
+	log.Println("key: " + key)
+	return nil
 }
 
 func (c *nodeBurstController) onAdd(obj interface{}) {
@@ -80,7 +132,7 @@ func (c *nodeBurstController) onAdd(obj interface{}) {
 // Returns a slice of pods with custom scheduler and no assignment
 func (c *nodeBurstController) getPods() ([]*v1.Pod, error) {
 
-	rawPODS, _ := c.podLister.Pods("").List(labels.Everything())
+	rawPODS, _ := c.podLister.Pods("Default").List(labels.Everything())
 	pods := []*v1.Pod{}
 
 	for _, pod := range rawPODS {
