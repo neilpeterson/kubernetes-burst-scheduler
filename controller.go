@@ -6,6 +6,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -13,6 +14,7 @@ import (
 
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	informercorev1 "k8s.io/client-go/informers/core/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	listercorev1 "k8s.io/client-go/listers/core/v1"
@@ -113,17 +115,23 @@ func (c *nodeBurstController) processNextWorkItem() bool {
 }
 
 func (c *nodeBurstController) processItem(key string) error {
+
 	// Here I am getting the pod using the split key.
 	// TODO - update to use informer.GetIndexer().GetByKey(key)
 	pod := c.getPod(strings.Split(key, "/")[1])
 
 	if pod != nil {
-		burst := calculatePodPlacement(pod)
+		// log.Println("Start calculate pod placement")
+		burst := c.calculatePodPlacement(pod)
+
+		name := pod.GetName()
 
 		if burst {
 			// Burst schedule
+			schedulePod(name, "virtual-kubelet-myaciconnector-linux")
 		} else {
 			// Use default scheduler
+			schedulePod(name, "aks-nodepool1-23443254-0")
 		}
 	}
 	return nil
@@ -132,112 +140,46 @@ func (c *nodeBurstController) processItem(key string) error {
 func (c *nodeBurstController) getPod(podName string) *v1.Pod {
 	pod, _ := c.podGetter.Pods("default").Get(podName, metav1.GetOptions{})
 
-	// TODO - filter out initial pods by namespace.
-	// Return err
-	// if err != nil {
-	// 	log.Println(err)
-	// }
-
 	if (pod.Spec.SchedulerName == "test-scheduler") && (pod.Spec.NodeName == "") {
-		log.Println("Pod " + podName + " needs to be scheduled.")
 		return pod
 	}
 	return nil
 }
 
-func calculatePodPlacement(pod *v1.Pod) bool {
-	labels := pod.GetLabels()["app"]
-	log.Println(labels)
+func (c *nodeBurstController) calculatePodPlacement(pod *v1.Pod) bool {
 
-	// TODO:
-	// Get all pods with app label
-	// Calculate scheduled
-	// Calculate scheduled on burst node
-	// Return burstNode or default scheduler
+	// Get pod label, used to find all replicas for burst calculation
+	podLabel := pod.GetLabels()["app"]
+
+	rawPODS, _ := c.podLister.Pods("default").List(labels.Everything())
+
+	//var scheduled int
+	var notScheduled int
+
+	for _, pod := range rawPODS {
+		if pod.GetLabels()["app"] == podLabel {
+
+			//if pod.Status.Phase == "Pending" {
+			if pod.Spec.NodeName == "" {
+
+				notScheduled++
+				if notScheduled < burstValue {
+					return true
+				}
+
+			} else {
+				fmt.Println("Pod is allready schedled.")
+				return false
+			}
+
+		} else {
+			// Discard
+			log.Println("Discard")
+		}
+		duration := time.Duration(1) * time.Second
+		time.Sleep(duration)
+	}
 
 	// Return true to burst / false to use default
 	return true
-
 }
-
-// func (c *nodeBurstController) onAdd(obj interface{}) {
-
-// 	// Get pods assigned to custom scheduler.
-// 	pods, _ := c.getPods()
-
-// 	// Get current state of pods (PendingSchedule vs. Scheduled).
-// 	psch, sch := c.getCurrentState(pods)
-
-// 	// Calcuate pod placement and schedule.
-// 	calculatePodPlacement(psch, sch, pods)
-// }
-
-// Returns a slice of pods with custom scheduler and no assignment
-//TODO - how will this function if I process one pod at a time?
-// func (c *nodeBurstController) getPods() ([]*v1.Pod, error) {
-
-// 	rawPODS, _ := c.podLister.Pods("Default").List(labels.Everything())
-// 	pods := []*v1.Pod{}
-
-// 	for _, pod := range rawPODS {
-// 		if (pod.Spec.SchedulerName == "test-scheduler") && (pod.Spec.NodeName == "") {
-// 			pods = append(pods, pod)
-// 		}
-// 	}
-// 	log.Println(len(pods))
-// 	return pods, nil
-// }
-
-// // Scheduler Calculation
-// func (c *nodeBurstController) getCurrentState(pods []*v1.Pod) (int, int) {
-
-// 	// Store app labels for calculation
-// 	appLabel := map[string]bool{}
-
-// 	PendingSchedule := 0
-// 	Scheduled := 0
-
-// 	// Add app label to map if not exsist
-// 	for _, p := range pods {
-// 		if appLabel[p.GetLabels()["app"]] {
-
-// 		} else {
-// 			appLabel[p.GetLabels()["app"]] = true
-// 		}
-
-// 		// Calculate allready scheduled, and need to schedule
-// 		for _, pod := range pods {
-// 			if appLabel[pod.GetLabels()["app"]] {
-// 				if pod.Status.Phase == "Pending" {
-// 					PendingSchedule++
-// 				} else {
-// 					Scheduled++
-// 				}
-// 			}
-// 		}
-// 	}
-// 	return PendingSchedule, Scheduled
-// }
-
-// // Calculate placement and run function to schedule on node
-// func calculatePodPlacement(psch int, sch int, pods []*v1.Pod) {
-
-// 	newInt := 0
-
-// 	if sch < burstValue {
-// 		newInt = burstValue - sch
-
-// 		for _, pod := range pods {
-// 			log.Println(pod.GetName())
-// 			if newInt > 0 {
-// 				log.Println("Schedule on node..")
-// 				schedulePod(pod.GetName(), "aks-nodepool1-42032720-0")
-// 				newInt--
-// 			} else {
-// 				log.Println("Schedule on burst node..")
-// 				schedulePod(pod.GetName(), "aks-nodepool1-42032720-2")
-// 				newInt--
-// 			}
-// 		}
-// 	}
-// }

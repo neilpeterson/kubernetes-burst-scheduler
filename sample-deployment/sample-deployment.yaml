@@ -1,15 +1,21 @@
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: test-burst
+  name: aci-helloworld
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: test-burst
+        app: aci-helloworld
     spec:
       schedulerName: test-scheduler
       containers:
-      - name: test-burst
-        image: nginx
+      - name: aci-helloworld
+        image: microsoft/aci-helloworld
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: 1G
+            cpu: 250m
