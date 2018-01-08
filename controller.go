@@ -1,42 +1,51 @@
-// TODO1 - Complete scheduling
-// TODO2 - Figure out cache sync / missing go routine
-
 package main
 
 import (
 	"log"
+	"strings"
+	"sync"
+	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	informercorev1 "k8s.io/client-go/informers/core/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	listercorev1 "k8s.io/client-go/listers/core/v1"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
 )
 
+// TODO - add function to validate node exsists
+var burstNode = "aks-nodepool1-42032720-2"
 var burstValue = 2
 
 type nodeBurstController struct {
 	podGetter       corev1.PodsGetter
 	podLister       listercorev1.PodLister
 	podListerSynced cache.InformerSynced
+	queue           workqueue.RateLimitingInterface
 }
 
-// Node burst controller with an on add function
 func newNodeBurstController(client *kubernetes.Clientset, podInformer informercorev1.PodInformer) *nodeBurstController {
 
 	c := &nodeBurstController{
 		podGetter:       client.CoreV1(),
 		podLister:       podInformer.Lister(),
 		podListerSynced: podInformer.Informer().HasSynced,
+		queue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "secretsync"),
 	}
 
 	podInformer.Informer().AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				c.onAdd(obj)
+				key, err := cache.MetaNamespaceKeyFunc(obj)
+				if err == nil {
+					c.queue.Add(key)
+				}
 			},
 		},
 	)
@@ -44,98 +53,111 @@ func newNodeBurstController(client *kubernetes.Clientset, podInformer informerco
 	return c
 }
 
-// Run node burst controller
-// TODO2 - Figure out cache sync / missing go routine
 func (c *nodeBurstController) Run(stop <-chan struct{}) {
+	var wg sync.WaitGroup
+
+	defer func() {
+		log.Println("Shutting down queue.")
+		c.queue.ShutDown()
+
+		log.Println("Shutting down worker")
+		wg.Wait()
+
+		log.Println("Workers are all done.")
+	}()
 
 	log.Print("waiting for cache sync")
-
 	if !cache.WaitForCacheSync(stop, c.podListerSynced) {
 		log.Print("Timed out while waiting for cache")
 		return
 	}
 	log.Println("Caches are synced")
 
+	go func() {
+		wait.Until(c.runWorker, time.Second, stop)
+		wg.Done()
+	}()
+
 	log.Print("Waiting for stop singnal")
 	<-stop
 	log.Print("Recieved stop singnal")
 }
 
-func (c *nodeBurstController) onAdd(obj interface{}) {
-
-	// Get pods using custom scheduler.
-	pods, _ := c.getPods()
-
-	// Get current state of pods (PendingSchedule vs. Scheduled).
-	psch, sch := c.getCurrentState(pods)
-
-	// Calcuate pod placement.
-	calculatePodPlacement(psch, sch, pods)
-}
-
-// Returns a slice of pods with custom scheduler and no assignment
-func (c *nodeBurstController) getPods() ([]*v1.Pod, error) {
-
-	rawPODS, _ := c.podLister.Pods("").List(labels.Everything())
-	pods := []*v1.Pod{}
-
-	for _, pod := range rawPODS {
-		if (pod.Spec.SchedulerName == "test-scheduler") && (pod.Spec.NodeName == "") {
-			pods = append(pods, pod)
-		}
+func (c *nodeBurstController) runWorker() {
+	for c.processNextWorkItem() {
 	}
-	return pods, nil
 }
 
-// Scheduler Calculation
-func (c *nodeBurstController) getCurrentState(pods []*v1.Pod) (int, int) {
+func (c *nodeBurstController) processNextWorkItem() bool {
 
-	// Store app labels for calculation
-	appLabel := map[string]bool{}
+	// Pull work item from queue.
+	key, quit := c.queue.Get()
+	if quit {
+		return false
+	}
+	defer c.queue.Done(key)
 
-	PendingSchedule := 0
-	Scheduled := 0
+	// Do the work
+	err := c.processItem(key.(string))
+	if err == nil {
+		c.queue.Forget(key)
+		return true
+	}
 
-	// Add app label to map if not exsist
-	for _, p := range pods {
-		if appLabel[p.GetLabels()["app"]] {
+	return true
+}
 
+func (c *nodeBurstController) processItem(key string) error {
+
+	// TODO - Update to use informer.GetIndexer().GetByKey(key)
+	pod := c.getPod(strings.Split(key, "/")[1])
+
+	if pod != nil {
+
+		defaultScheduler := c.calculatePodPlacement(pod)
+
+		if defaultScheduler {
+			log.Println("Scheduling pod using default scheduler: " + pod.GetName())
+			schedulePod(pod.GetName(), "aks-nodepool1-42032720-0")
 		} else {
-			appLabel[p.GetLabels()["app"]] = true
-		}
-
-		// Calculate allready scheduled, and need to schedule
-		for _, pod := range pods {
-			if appLabel[pod.GetLabels()["app"]] {
-				if pod.Status.Phase == "Pending" {
-					PendingSchedule++
-				} else {
-					Scheduled++
-				}
-			}
+			log.Println("Scheduling pod on burst node: " + pod.GetName())
+			schedulePod(pod.GetName(), burstNode)
 		}
 	}
-	return PendingSchedule, Scheduled
+	return nil
 }
 
-func calculatePodPlacement(psch int, sch int, pods []*v1.Pod) {
+func (c *nodeBurstController) getPod(podName string) *v1.Pod {
+	pod, _ := c.podGetter.Pods("default").Get(podName, metav1.GetOptions{})
 
-	newInt := 0
+	if (pod.Spec.SchedulerName == "test-scheduler") && (pod.Spec.NodeName == "") {
+		return pod
+	}
+	return nil
+}
 
-	if sch < burstValue {
-		newInt = burstValue - sch
+func (c *nodeBurstController) calculatePodPlacement(pod *v1.Pod) bool {
 
-		for _, pod := range pods {
-			log.Println(pod.GetName())
-			if newInt > 0 {
-				log.Println("Schedule on node..")
-				schedulePod(pod.GetName(), "aks-nodepool1-42032720-0")
-				newInt--
-			} else {
-				log.Println("Scheduleon ACI")
-				schedulePod(pod.GetName(), "virtual-kubelet-virtual-kublet-linux")
-				newInt--
+	var scheduled int
+	var track int
+
+	// Get all pods with matching label
+	podLabel := pod.GetLabels()["app"]
+	rawPODS, _ := c.podLister.Pods("default").List(labels.Everything())
+
+	// Calculate placement
+	for _, pod := range rawPODS {
+		if pod.GetLabels()["app"] == podLabel {
+			if pod.Spec.NodeName != "" {
+				scheduled++
 			}
 		}
 	}
+	track = burstValue - scheduled
+	if track > 0 {
+		// Default scheduler
+		return true
+	}
+	// Burst node
+	return false
 }
