@@ -1,30 +1,26 @@
-// TODO - figure out config file /  environment variable
-// TODO - provide name for scheduler
-// TODO - updated schedule on node to use default scheduler
-// TODO - how will this function if I process one pod at a time?
-
 package main
 
 import (
-	"fmt"
 	"log"
 	"strings"
 	"sync"
 	"time"
 
-	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	informercorev1 "k8s.io/client-go/informers/core/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	listercorev1 "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/util/workqueue"
 
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
 )
 
+// TODO - add function to validate node exsists
+var burstNode = "aks-nodepool1-42032720-2"
 var burstValue = 2
 
 type nodeBurstController struct {
@@ -34,7 +30,6 @@ type nodeBurstController struct {
 	queue           workqueue.RateLimitingInterface
 }
 
-// Node burst controller with an on add function
 func newNodeBurstController(client *kubernetes.Clientset, podInformer informercorev1.PodInformer) *nodeBurstController {
 
 	c := &nodeBurstController{
@@ -58,11 +53,9 @@ func newNodeBurstController(client *kubernetes.Clientset, podInformer informerco
 	return c
 }
 
-// Run node burst controller
 func (c *nodeBurstController) Run(stop <-chan struct{}) {
 	var wg sync.WaitGroup
 
-	// Stop queue and workers
 	defer func() {
 		log.Println("Shutting down queue.")
 		c.queue.ShutDown()
@@ -116,22 +109,19 @@ func (c *nodeBurstController) processNextWorkItem() bool {
 
 func (c *nodeBurstController) processItem(key string) error {
 
-	// Here I am getting the pod using the split key.
-	// TODO - update to use informer.GetIndexer().GetByKey(key)
+	// TODO - Update to use informer.GetIndexer().GetByKey(key)
 	pod := c.getPod(strings.Split(key, "/")[1])
 
 	if pod != nil {
-		// log.Println("Start calculate pod placement")
-		burst := c.calculatePodPlacement(pod)
 
-		name := pod.GetName()
+		defaultScheduler := c.calculatePodPlacement(pod)
 
-		if burst {
-			// Burst schedule
-			schedulePod(name, "virtual-kubelet-myaciconnector-linux")
+		if defaultScheduler {
+			log.Println("Scheduling pod using default scheduler: " + pod.GetName())
+			schedulePod(pod.GetName(), "aks-nodepool1-42032720-0")
 		} else {
-			// Use default scheduler
-			schedulePod(name, "aks-nodepool1-23443254-0")
+			log.Println("Scheduling pod on burst node: " + pod.GetName())
+			schedulePod(pod.GetName(), burstNode)
 		}
 	}
 	return nil
@@ -148,38 +138,26 @@ func (c *nodeBurstController) getPod(podName string) *v1.Pod {
 
 func (c *nodeBurstController) calculatePodPlacement(pod *v1.Pod) bool {
 
-	// Get pod label, used to find all replicas for burst calculation
-	podLabel := pod.GetLabels()["app"]
+	var scheduled int
+	var track int
 
+	// Get all pods with matching label
+	podLabel := pod.GetLabels()["app"]
 	rawPODS, _ := c.podLister.Pods("default").List(labels.Everything())
 
-	//var scheduled int
-	var notScheduled int
-
+	// Calculate placement
 	for _, pod := range rawPODS {
 		if pod.GetLabels()["app"] == podLabel {
-
-			//if pod.Status.Phase == "Pending" {
-			if pod.Spec.NodeName == "" {
-
-				notScheduled++
-				if notScheduled < burstValue {
-					return true
-				}
-
-			} else {
-				fmt.Println("Pod is allready schedled.")
-				return false
+			if pod.Spec.NodeName != "" {
+				scheduled++
 			}
-
-		} else {
-			// Discard
-			log.Println("Discard")
 		}
-		duration := time.Duration(1) * time.Second
-		time.Sleep(duration)
 	}
-
-	// Return true to burst / false to use default
-	return true
+	track = burstValue - scheduled
+	if track > 0 {
+		// Default scheduler
+		return true
+	}
+	// Burst node
+	return false
 }
