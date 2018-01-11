@@ -15,7 +15,3 @@ spec:
         image: microsoft/aci-helloworld
         ports:
         - containerPort: 80
-        resources:
-          requests:
-            memory: 1G
-            cpu: 250m

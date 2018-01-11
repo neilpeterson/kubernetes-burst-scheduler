@@ -1,3 +1,8 @@
+// TODO - Pick back up on returning slice of nodes and burtsnode
+// TODO - Cluster config and api updates.
+// TODO - Refactor variable names, files.
+// TODO - Readme.
+
 package main
 
 import (
@@ -28,6 +33,7 @@ type nodeBurstController struct {
 	podLister       listercorev1.PodLister
 	podListerSynced cache.InformerSynced
 	queue           workqueue.RateLimitingInterface
+	nodes           corev1.NodesGetter
 }
 
 func newNodeBurstController(client *kubernetes.Clientset, podInformer informercorev1.PodInformer) *nodeBurstController {
@@ -37,6 +43,7 @@ func newNodeBurstController(client *kubernetes.Clientset, podInformer informerco
 		podLister:       podInformer.Lister(),
 		podListerSynced: podInformer.Informer().HasSynced,
 		queue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "secretsync"),
+		nodes:           client.CoreV1(),
 	}
 
 	podInformer.Informer().AddEventHandler(
@@ -49,7 +56,6 @@ func newNodeBurstController(client *kubernetes.Clientset, podInformer informerco
 			},
 		},
 	)
-
 	return c
 }
 
@@ -97,19 +103,18 @@ func (c *nodeBurstController) processNextWorkItem() bool {
 	}
 	defer c.queue.Done(key)
 
-	// Do the work
+	// Process work item
 	err := c.processItem(key.(string))
 	if err == nil {
 		c.queue.Forget(key)
 		return true
 	}
-
 	return true
 }
 
 func (c *nodeBurstController) processItem(key string) error {
 
-	// TODO - Update to use informer.GetIndexer().GetByKey(key)
+	// Get pod, TODO - Update to use informer.GetIndexer().GetByKey(key)
 	pod := c.getPod(strings.Split(key, "/")[1])
 
 	if pod != nil {
@@ -118,10 +123,30 @@ func (c *nodeBurstController) processItem(key string) error {
 
 		if defaultScheduler {
 			log.Println("Scheduling pod using default scheduler: " + pod.GetName())
-			schedulePod(pod.GetName(), "aks-nodepool1-42032720-0")
+
+			// Get node list
+			n, _ := c.listNodes()
+
+			// Get random node - TODO: update this to change to the default scheduler
+			randomNode := getRandomNode(n)
+
+			// Schedule on random node
+			schedulePod(pod.GetName(), randomNode)
+
 		} else {
 			log.Println("Scheduling pod on burst node: " + pod.GetName())
-			schedulePod(pod.GetName(), burstNode)
+
+			// Validate node - get node list
+			n, bn := c.listNodes()
+
+			// Validate burst node
+			validNode := c.checkNode(n, bn)
+
+			if validNode {
+				schedulePod(pod.GetName(), burstNode)
+			} else {
+				log.Printf("%s%s%s", "Node: ", burstNode, " can not be found.")
+			}
 		}
 	}
 	return nil
