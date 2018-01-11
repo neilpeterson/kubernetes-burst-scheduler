@@ -46,7 +46,8 @@ func schedulePod(podName string, nodeName string) {
 		fmt.Println(err)
 	}
 
-	// HTTP Post to update node name.
+	// HTTP Post to update node name
+	// TODO - update to used go client - is this posiable
 	url := "http://localhost:8001/api/v1/namespaces/default/pods/" + podName + "/binding"
 	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(body))
 	req.Header.Add("Content-Type", "application/json")

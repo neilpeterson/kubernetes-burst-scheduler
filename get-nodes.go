@@ -7,39 +7,35 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (c *nodeBurstController) listNodes() ([]string, string) {
+func (c *nodeBurstController) listNodes() ([]string, bool) {
 
 	var nodeList []string
-	var bn string
+	var valid bool
 
+	// Get all nodes
 	nodes, _ := c.nodes.Nodes().List(metav1.ListOptions{})
 
+	// Remove burst node from list
+	// Validate burst node exsists
 	for _, n := range nodes.Items {
 		if n.GetName() != burstNode {
 			nodeList = append(nodeList, n.GetName())
-		} else {
-			bn = string(n.GetName())
+		}
+		if n.GetName() == burstNode {
+			valid = true
 		}
 	}
-	fmt.Println("BN: " + bn)
-	fmt.Println(len(nodeList))
-	return nodeList, bn
-}
 
-func (c *nodeBurstController) checkNode(nodeList []string, nodeName string) bool {
-	fmt.Println("Checking for node: " + nodeName)
-	for _, n := range nodeList {
-		fmt.Println("N: " + n)
-		if n == nodeName {
-			return true
-		}
+	if valid {
+		return nodeList, true
 	}
-	return false
+	return nodeList, false
 }
 
+// Get random node from list - burst node
+// TODO - update to assign the default scheduler to pod
 func getRandomNode(nodeList []string) string {
 
-	// Get random node
 	n := rand.Int() % len(nodeList)
 	node := nodeList[n]
 
