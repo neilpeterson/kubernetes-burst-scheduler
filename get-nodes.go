@@ -18,10 +18,10 @@ func (c *nodeBurstController) listNodes() ([]string, bool) {
 	// Remove burst node from list
 	// Validate burst node exsists
 	for _, n := range nodes.Items {
-		if n.GetName() != burstNode {
+		if n.GetName() != *burstNode {
 			nodeList = append(nodeList, n.GetName())
 		}
-		if n.GetName() == burstNode {
+		if n.GetName() == *burstNode {
 			valid = true
 		}
 	}
