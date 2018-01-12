@@ -1,12 +1,12 @@
 // TODO - Cluster config and api updates.
 // TODO - Refactor variable names, files.
-// TODO - burtst value and burst node to argument.
 // TODO - filter terminating pods.
 // TODO - Readme.
 
 package main
 
 import (
+	"flag"
 	"log"
 	"strings"
 	"sync"
@@ -25,9 +25,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
-var burstNode = "aks-nodepool1-42032720-2"
-var burstValue = 10
-
 type nodeBurstController struct {
 	podGetter       corev1.PodsGetter
 	podLister       listercorev1.PodLister
@@ -35,6 +32,9 @@ type nodeBurstController struct {
 	queue           workqueue.RateLimitingInterface
 	nodes           corev1.NodesGetter
 }
+
+var burstNode = flag.String("burstNode", "", "Name of node onto which pods burst schedule.")
+var burstValue = flag.Int("burstValue", 2, "Count of pods after which the burst node is scheduled.")
 
 func newNodeBurstController(client *kubernetes.Clientset, podInformer informercorev1.PodInformer) *nodeBurstController {
 
@@ -118,6 +118,8 @@ func (c *nodeBurstController) processNextWorkItem() bool {
 // Process item - work starts here
 func (c *nodeBurstController) processItem(key string) error {
 
+	flag.Parse()
+
 	// Get pod, TODO - Update to use informer.GetIndexer().GetByKey(key)
 	pod := c.getPod(strings.Split(key, "/")[1])
 
@@ -146,9 +148,9 @@ func (c *nodeBurstController) processItem(key string) error {
 
 			if bn {
 				// Schedule pod on random node
-				schedulePod(pod.GetName(), burstNode)
+				schedulePod(pod.GetName(), *burstNode)
 			} else {
-				log.Printf("%s%s%s", "Node: ", burstNode, " can not be found.")
+				log.Printf("%s%s%s", "Node: ", *burstNode, " can not be found.")
 			}
 		}
 	}
@@ -184,7 +186,7 @@ func (c *nodeBurstController) calculatePodPlacement(pod *v1.Pod) bool {
 			}
 		}
 	}
-	track = burstValue - scheduled
+	track = *burstValue - scheduled
 	if track > 0 {
 		// Default scheduler
 		return true
