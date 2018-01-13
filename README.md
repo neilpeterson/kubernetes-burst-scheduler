@@ -26,7 +26,7 @@ As the number of concurrently running jobs drops back under 10, pods will be sch
 Run the following to start the burst scheduler.
 
 ```
-kubectl create -f <add file>
+kubectl create -f https://raw.githubusercontent.com/neilpeterson/k8s-go-controller/master/manifest-files/burst-scheduler.yaml
 ```
 
 Here is the manifest file that is run.
@@ -59,7 +59,7 @@ go run burst-scheduler --burstNode virtual-kubelet-myaciconnector-linux --burstV
 Arguments:
 
 | Argument | Type | Description |
-|---|---|
+|---|---|---|
 | burstNode | String | Node name of the burst node. This is the node on which pods are scheduled once the burstValue has been met. |
 | burstValue | Int | Value that controls how many pods will be scheduled on Kubernetes nodes vs. burst node. |
 | kubeConfig | Bool | Indicates that a kubernetes config file found at $KUBECONFIG is used for cluster discovery / auth. If not specified, it is assumed execution is occurring from a pod in the Kubernetes cluster. |
