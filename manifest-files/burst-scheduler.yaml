@@ -1,0 +1,16 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: gogurt
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: gogurt
+    spec:
+      containers:
+      - name: kubectl-sidecar
+        image: neilpeterson/kubectl-proxy-sidecar
+      - name: gogurt
+        image: neilpeterson/gogurt

@@ -1,0 +1,17 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: aci-helloworld
+spec:
+  replicas: 10
+  template:
+    metadata:
+      labels:
+        app: aci-helloworld
+    spec:
+      schedulerName: test-scheduler
+      containers:
+      - name: aci-helloworld
+        image: microsoft/aci-helloworld
+        ports:
+        - containerPort: 80
