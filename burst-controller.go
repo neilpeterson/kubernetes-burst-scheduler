@@ -1,6 +1,3 @@
-// TODO - filter terminating pods.
-// TODO - Readme.
-
 package main
 
 import (
