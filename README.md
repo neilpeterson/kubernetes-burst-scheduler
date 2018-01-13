@@ -66,15 +66,15 @@ Arguments:
 
 ## TODO:
 
-Terminating pods – filter these from scope. Not a big issue but can be problematic during demos / quick turn-a-rounds.
+**Terminating pods** – filter these from scope. Not a big issue but can be problematic during demos / quick turn-a-rounds.
 
-Namespace - currently 'default' is a non-configurable default. Update with a `--namespace` argument.
+**Namespace** - currently 'default' is a non-configurable default. Update with a `--namespace` argument.
 
-Default Scheduler - Update pod updater to use default scheduler when not in burst. Currently a random node from all nodes - the burst node is chosen for scheduling.
+**Default Scheduler** - Update pod updater to use default scheduler when not in burst. Currently a random node from all nodes - the burst node is chosen for scheduling.
 
-API Authentication - go client is working well, however unsure how to handle direct api call. Currently using side car / kubectl proxy (recommended in docs). Can I a. auth / raw rest call through the go client. b. See next TODO.
+**API Authentication** - go client is working well, however unsure how to handle direct api call. Currently using side car / kubectl proxy (recommended in docs). Can I a. auth / raw rest call through the go client. b. See next TODO.
 
-Update node - currently the node assignment is handled through direct api call. I was unable to used pod.update due to a non-updatable property (target.name). Is there a way to complete through the go client? This would produce neater code and remove the need for the side car container.
+**Node Update** - currently the node assignment is handled through direct api call. I was unable to used pod.update due to a non-updatable property (target.name). Is there a way to complete through the go client? This would produce neater code and remove the need for the side car container.
 
 
 
