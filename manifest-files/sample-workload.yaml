@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: aci-helloworld
 spec:
-  replicas: 10
+  replicas: 1
   template:
     metadata:
       labels:
