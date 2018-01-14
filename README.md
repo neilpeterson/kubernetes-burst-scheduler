@@ -81,6 +81,7 @@ Arguments:
 ```
 
 Also see - https://github.com/kubernetes/kubernetes/issues/24913
+
 And - https://stackoverflow.com/questions/46499450/kubernetes-is-there-a-way-to-update-nodeaffinity-and-schedulername-in-pod-c
 
 **Label Filter** - currenly using a loop to inventory and combine nodes with a common label. Update to filter the returned list. See this [doc for a sample](http://blog.kubernetes.io/2018/01/introducing-client-go-version-6.html), would this work here.
