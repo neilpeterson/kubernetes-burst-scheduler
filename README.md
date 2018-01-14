@@ -74,7 +74,16 @@ Arguments:
 
 **API Authentication** - go client is working well, however unsure how to handle direct api call. Currently using side car / kubectl proxy (recommended in docs). Can I a. auth / raw rest call through the go client. b. See next TODO.
 
-**Node Update** - currently the node assignment is handled through direct api call. I was unable to used pod.update due to a non-updatable property (target.name). Is there a way to complete through the go client? This would produce neater code and remove the need for the side car container.
+**Node Update** - currently the node assignment is handled through direct api call. I was unable to used pod.update due to a non-updatable property (error below). Is there a way to complete through the go client? This would produce neater code and remove the need for the side car container.
+
+```
+"aci-helloworld-4142002832-3l873" is invalid: spec: Forbidden: pod updates may not change fields other than `spec.containers[*].image`, `spec.initContainers[*].image`, `spec.activeDeadlineSeconds` or `spec.tolerations` (only additions to existing tolerations)
+```
+
+Also see - https://github.com/kubernetes/kubernetes/issues/24913
+And - https://stackoverflow.com/questions/46499450/kubernetes-is-there-a-way-to-update-nodeaffinity-and-schedulername-in-pod-c
+
+**Label Filter** - currenly using a loop to inventory and combine nodes with a common label. Update to filter the returned list. See this [doc for a sample](http://blog.kubernetes.io/2018/01/introducing-client-go-version-6.html), would this work here.
 
 
 
