@@ -1,4 +1,3 @@
-
 # Kubernetes burst scheduler
 
 Simple scheduler that will burst workload to a named node after a specified number of related pods have been started.
@@ -66,27 +65,18 @@ Arguments:
 
 ## TODO:
 
+**Label Filter** - currenly using a loop to inventory and combine nodes with a common label. Update to filter the returned list. See this [doc for a sample](http://blog.kubernetes.io/2018/01/introducing-client-go-version-6.html), would this work here.
+
 **Terminating pods** – filter these from scope. Not a big issue but can be problematic during demos / quick turn-a-rounds.
 
 **Namespace** - currently 'default' is a non-configurable default. Update with a `--namespace` argument.
 
-**Default Scheduler** - Update pod updater to use default scheduler when not in burst. Currently a random node from all nodes - the burst node is chosen for scheduling.
+**Default Scheduler** - Update pod updater to use default scheduler when not in burst. Currently a random node from all nodes - the burst node is chosen for scheduling. I am not able to patch the pod scheduler property value.
 
-**API Authentication** - go client is working well, however unsure how to handle direct api call. Currently using side car / kubectl proxy (recommended in docs). Can I a. auth / raw rest call through the go client. b. See next TODO.
-
-**Node Update** - currently the node assignment is handled through direct api call. I was unable to used pod.update due to a non-updatable property (error below). Is there a way to complete through the go client? This would produce neater code and remove the need for the side car container.
+**Pod node assignment** - Update this to use go client method, go client rest interface. Currently the node assignment is handled through direct api call (via kubectl proxy / sidecar). I was unable to use podInterface.update due to a non-updatable property (error below). Is there a way to complete through the go client, if not I see the that there is a REST interface, this is probably a better way to achieve this.
 
 ```
 "aci-helloworld-4142002832-3l873" is invalid: spec: Forbidden: pod updates may not change fields other than `spec.containers[*].image`, `spec.initContainers[*].image`, `spec.activeDeadlineSeconds` or `spec.tolerations` (only additions to existing tolerations)
 ```
 
-Also see - https://github.com/kubernetes/kubernetes/issues/24913
-
-And - https://stackoverflow.com/questions/46499450/kubernetes-is-there-a-way-to-update-nodeaffinity-and-schedulername-in-pod-c
-
-**Label Filter** - currenly using a loop to inventory and combine nodes with a common label. Update to filter the returned list. See this [doc for a sample](http://blog.kubernetes.io/2018/01/introducing-client-go-version-6.html), would this work here.
-
-
-
-
-
+https://github.com/kubernetes/kubernetes/issues/24913
