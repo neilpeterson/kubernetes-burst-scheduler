@@ -12,7 +12,6 @@ import (
 	listercorev1 "k8s.io/client-go/listers/core/v1"
 
 	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -118,7 +117,7 @@ func (c *nodeBurstController) processItem(key string) error {
 		defaultScheduler := c.calculatePodPlacement(pod)
 
 		if defaultScheduler {
-			log.Println("Scheduling pod using default scheduler: " + pod.GetName())
+			log.Printf("%s%s%s", "Scheduling pod", pod.GetName(), "using default scheduler.")
 
 			// Get node list
 			n, _ := c.listNodes()
@@ -130,7 +129,7 @@ func (c *nodeBurstController) processItem(key string) error {
 			schedulePod(pod.GetName(), randomNode)
 
 		} else {
-			log.Println("Scheduling pod on burst node: " + pod.GetName())
+			log.Printf("%s%s%s", "Scheduling pod ", pod.GetName(), "on burst node.")
 
 			// Validate burst nodes exsists
 			_, bn := c.listNodes()
@@ -156,7 +155,6 @@ func (c *nodeBurstController) getPod(podName string) *v1.Pod {
 	return nil
 }
 
-// Calculates state for pods with matching labels
 // Determins if the burst node is needed
 func (c *nodeBurstController) calculatePodPlacement(pod *v1.Pod) bool {
 
@@ -165,14 +163,14 @@ func (c *nodeBurstController) calculatePodPlacement(pod *v1.Pod) bool {
 
 	// Get all pods with matching label
 	podLabel := pod.GetLabels()["app"]
-	rawPODS, _ := c.podLister.Pods("default").List(labels.Everything())
+
+	// TODO - can I do this with the lister?
+	rawPODS, _ := c.podGetter.Pods("").List(metav1.ListOptions{LabelSelector: "app=" + podLabel})
 
 	// Calculate placement
-	for _, pod := range rawPODS {
-		if pod.GetLabels()["app"] == podLabel {
-			if pod.Spec.NodeName != "" {
-				scheduled++
-			}
+	for _, pod := range rawPODS.Items {
+		if pod.Spec.NodeName != "" {
+			scheduled++
 		}
 	}
 	track = *burstValue - scheduled
