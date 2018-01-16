@@ -65,8 +65,6 @@ Arguments:
 
 ## TODO:
 
-**Label Filter** - currenly using a loop to inventory and combine nodes with a common label. Update to filter the returned list. See this [doc for a sample](http://blog.kubernetes.io/2018/01/introducing-client-go-version-6.html), would this work here.
-
 **Terminating pods** – filter these from scope. Not a big issue but can be problematic during demos / quick turn-a-rounds.
 
 **Namespace** - currently 'default' is a non-configurable default. Update with a `--namespace` argument.
