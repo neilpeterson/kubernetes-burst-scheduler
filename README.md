@@ -14,11 +14,9 @@ aks-nodepool1-34059843-2               Ready     agent     9h        v1.7.7
 virtual-kubelet-myaciconnector-linux   Ready     agent     2m        v1.8.3
 ```
 
-A batch processing routine automatically starts jobs on the Kuebrentes cluster to process some work. In general, 5  - 10 jobs are being processed / pods started at any given time. Occasionally an event occurs that temporarily increases this workload to 15 – 20 concurrent jobs. 
+A batch processing routine automatically starts jobs on the Kuebrentes cluster. In general, 5 - 10 of these jobs/pods are running at any given time. Occasionally an event occurs that temporarily increases this workload to 15 – 20 concurrent jobs/pods. 
 
-You would like to primarily run these jobs on the Kubernetes nodes in your cluster, however is the number of concurrently running pods increases above 10, these pods should be scheduled on Azure Container Instances by the virtual kublet node.
-
-As the number of concurrently running jobs drops back under 10, pods will be scheduled on the Kuebrentes nodes.
+You would like to primarily run these jobs on the Kubernetes nodes, however when the running jobs/pods increases above 10, these pods should be scheduled on Azure Container Instances by the virtual kublet node.
 
 ## Deployment
 
@@ -26,27 +24,6 @@ Run the following to start the burst scheduler.
 
 ```
 kubectl create -f https://raw.githubusercontent.com/neilpeterson/k8s-go-controller/master/manifest-files/burst-scheduler.yaml
-```
-
-Here is the manifest file that is run.
-
-```
-apiVersion: apps/v1beta1
-kind: Deployment
-metadata:
-  name: gogurt
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: gogurt
-    spec:
-      containers:
-      - name: kubectl-sidecar
-        image: neilpeterson/kubectl-proxy-sidecar
-      - name: gogurt
-        image: neilpeterson/gogurt
 ```
 
 ## Execution
@@ -66,6 +43,8 @@ Arguments:
 ## TODO:
 
 **Proper dockerfile** - create proper docker file for controller.
+
+**Proper example** - updated manifest file / sampe application with burst to ACI.
 
 **Terminating pods** – filter these from scope. Not a big issue but can be problematic during demos / quick turn-a-rounds.
 
