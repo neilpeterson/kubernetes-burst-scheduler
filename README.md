@@ -4,14 +4,16 @@ Simple scheduler that will burst workload to a named node after a specified numb
 
 ## Attribution
 
-This is my first go project and first exposure to the Kubernetes go client. Throughout these two resources have been invaluable. Many thanks to the contributing teams.
+This is my first go project and first exposure to the Kubernetes go client. Throughout, these two resources have been invaluable. Many thanks to the contributing teams.
 
 - [Joe Beda controller sample](https://github.com/jbeda/tgik-controller)
 - [Tu Nguyen kubewatch example / blog](https://engineering.bitnami.com/articles/kubewatch-an-example-of-kubernetes-custom-controller.html)
 
 ## Example use case:
 
-You have a Kuebrentes cluster that consists of three nodes. Virtual Kublet has been configured to present Azure Container Instances as a virtual node on a Kubernetes cluster. The cluster looks like this:
+**Environment:**
+
+You have a Kubernetes cluster with three nodes. [Virtual Kublet](https://github.com/virtual-kubelet/virtual-kubelet) has been configured to present Azure Container Instances as a virtual node on the cluster. The cluster looks like this:
 
 ```
 NAME                                   STATUS    ROLES     AGE       VERSION
@@ -21,9 +23,15 @@ aks-nodepool1-34059843-2               Ready     agent     9h        v1.7.7
 virtual-kubelet-myaciconnector-linux   Ready     agent     2m        v1.8.3
 ```
 
-A batch processing routine automatically starts jobs on the Kuebrentes cluster. In general, 5 - 10 of these jobs/pods are running at any given time. Occasionally an event occurs that temporarily increases this workload to 15 – 20 concurrent jobs/pods. 
+A batch processing routine automatically starts Kubernetes jobs on the Kuebrentes. On average, less than 10 of these jobs are running at any given time. Occasionally an event occurs that temporarily increases this workload to 15 – 20 concurrent jobs. 
 
-You would like to primarily run these jobs on the Kubernetes nodes, however when the running jobs/pods increases above 10, these pods should be scheduled on Azure Container Instances by the virtual kublet node.
+**Problem:**
+
+You would like to primarily run all jobs on the Kubernetes nodes, however when the number of concurrent jobs increases above 10, these pods should be scheduled on Azure Container Instances by the virtual kublet.
+
+**Solution:**
+
+With these desired results, the Kubernetes Burst Scheduler can be used to bust job[11 +] to the `virtual-kubelet-myaciconnector-linux` node.
 
 ## Deployment
 
