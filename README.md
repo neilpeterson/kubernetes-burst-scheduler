@@ -6,8 +6,8 @@ Simple scheduler that will burst workload to a named node after a specified numb
 
 This is my first go project and first exposure to the Kubernetes go client. Throughout these two resources have been invaluable. Many thanks to the contributing teams.
 
-- Joe Beda controller sample - https://github.com/jbeda/tgik-controller
-- Tu Nguyen kubewatch - https://engineering.bitnami.com/articles/kubewatch-an-example-of-kubernetes-custom-controller.html
+- [Joe Beda controller sample](https://github.com/jbeda/tgik-controller)
+- [Tu Nguyen kubewatch example / blog](https://engineering.bitnami.com/articles/kubewatch-an-example-of-kubernetes-custom-controller.html)
 
 ## Example use case:
 
@@ -52,16 +52,16 @@ spec:
 ## Execution
 
 ```
-go run burst-scheduler --burstNode virtual-kubelet-myaciconnector-linux --burstValue 10
+burst-scheduler --burstNode virtual-kubelet-myaciconnector-linux --burstValue 10
 ```
 
 Arguments:
 
 | Argument | Type | Description |
 |---|---|---|
-| --burstNode | String | Node name of the burst node. This is the node on which pods are scheduled once the burstValue has been met. |
-| --burstValue | Int | Value that controls how many pods will be scheduled on Kubernetes nodes vs. burst node. |
-| --kubeConfig | Bool | Indicates that a kubernetes config file found at $KUBECONFIG is used for cluster discovery / auth. If not specified, it is assumed execution is occurring from a pod in the Kubernetes cluster. |
+| burstNode | String | Node name of the burst node. This is the node on which pods are scheduled once the burstValue has been met. |
+| burstValue | Int | Value that controls how many pods will be scheduled on Kubernetes nodes vs. burst node. |
+| kubeConfig | Bool | Indicates that a kubernetes config file found at $KUBECONFIG is used for cluster discovery / auth. If not specified, it is assumed execution is occurring from a pod in the Kubernetes cluster. |
 
 ## TODO:
 
