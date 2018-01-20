@@ -2,6 +2,13 @@
 
 Simple scheduler that will burst workload to a named node after a specified number of related pods have been started.
 
+## Attribution
+
+This is my first go project and first exposure to the Kubernetes go client. Throughout these two resources have been invaluable. Many thanks to the contributing teams.
+
+- Joe Beda controller sample - https://github.com/jbeda/tgik-controller
+- Tu Nguyen kubewatch - https://engineering.bitnami.com/articles/kubewatch-an-example-of-kubernetes-custom-controller.html
+
 ## Example use case:
 
 You have a Kuebrentes cluster that consists of three nodes. Virtual Kublet has been configured to present Azure Container Instances as a virtual node on a Kubernetes cluster. The cluster looks like this:
@@ -20,10 +27,26 @@ You would like to primarily run these jobs on the Kubernetes nodes, however when
 
 ## Deployment
 
-Run the following to start the burst scheduler.
+The following manifest can be used to start the scheduler. Update `<node-name>` with the name of the burst node, and `<integer>` with the burst value. See the next section for details on all possible arguments.
 
-```
-kubectl create -f https://raw.githubusercontent.com/neilpeterson/k8s-go-controller/master/manifest-files/burst-scheduler.yaml
+```yaml
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: burst-scheduler
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: burst-scheduler
+    spec:
+      containers:
+      - name: kubectl-sidecar
+        image: neilpeterson/kubectl-proxy-sidecar
+      - name: burst-scheduler
+        image: neilpeterson/burst-scheduler:v1
+        args: ["--burstNode", "<node-name>", "--burstValue", "<integer>"]
 ```
 
 ## Execution
@@ -36,15 +59,11 @@ Arguments:
 
 | Argument | Type | Description |
 |---|---|---|
-| burstNode | String | Node name of the burst node. This is the node on which pods are scheduled once the burstValue has been met. |
-| burstValue | Int | Value that controls how many pods will be scheduled on Kubernetes nodes vs. burst node. |
-| kubeConfig | Bool | Indicates that a kubernetes config file found at $KUBECONFIG is used for cluster discovery / auth. If not specified, it is assumed execution is occurring from a pod in the Kubernetes cluster. |
+| --burstNode | String | Node name of the burst node. This is the node on which pods are scheduled once the burstValue has been met. |
+| --burstValue | Int | Value that controls how many pods will be scheduled on Kubernetes nodes vs. burst node. |
+| --kubeConfig | Bool | Indicates that a kubernetes config file found at $KUBECONFIG is used for cluster discovery / auth. If not specified, it is assumed execution is occurring from a pod in the Kubernetes cluster. |
 
 ## TODO:
-
-**Proper dockerfile** - create proper docker file for controller.
-
-**Proper example** - updated manifest file / sampe application with burst to ACI.
 
 **Terminating pods** – filter these from scope. Not a big issue but can be problematic during demos / quick turn-a-rounds.
 
