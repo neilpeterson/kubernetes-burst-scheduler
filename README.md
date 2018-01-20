@@ -23,15 +23,11 @@ aks-nodepool1-34059843-2               Ready     agent     9h        v1.7.7
 virtual-kubelet-myaciconnector-linux   Ready     agent     2m        v1.8.3
 ```
 
-A batch processing routine automatically starts Kubernetes jobs on the Kuebrentes. On average, less than 10 of these jobs are running at any given time. Occasionally an event occurs that temporarily increases this workload to 15 – 20 concurrent jobs. 
-
-**Problem:**
+A batch processing routine automatically starts Kubernetes jobs on the Kuebrentes. On average, less than 10 of these jobs are running at any given time. Occasionally an event occurs that temporarily increases this workload above 10 concurrent jobs. 
 
 You would like to primarily run all jobs on the Kubernetes nodes, however when the number of concurrent jobs increases above 10, these pods should be scheduled on Azure Container Instances by the virtual kublet.
 
-**Solution:**
-
-With these desired results, the Kubernetes Burst Scheduler can be used to bust job[11 +] to the `virtual-kubelet-myaciconnector-linux` node.
+With these desired results, the Kubernetes Burst Scheduler can be used to burst job 11, 12, ... to the `virtual-kubelet-myaciconnector-linux` node.
 
 ## Deployment
 
