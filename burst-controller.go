@@ -45,7 +45,7 @@ func newNodeBurstController(client *kubernetes.Clientset, podInformer informerco
 				}
 			},
 			DeleteFunc: func(obj interface{}) {
-				balancePods()
+				c.balancePods()
 			},
 		},
 	)
