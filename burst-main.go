@@ -15,6 +15,7 @@ import (
 var kubeConfig = flag.Bool("kubeConfig", false, "Use a config file found at $KUBECONFIG for cluster authentication")
 var burstNode = flag.String("burstNode", "", "Name of node onto which pods burst schedule.")
 var burstValue = flag.Int("burstValue", 2, "Count of pods after which the burst node is scheduled.")
+var schedulerName = flag.String("schedulerName", "burst-scheduler", "The name of the scheduler, this will match the named scheduler when deploying pods. The default value os burst-scheduler.")
 
 func main() {
 
