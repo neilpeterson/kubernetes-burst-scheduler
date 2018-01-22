@@ -152,7 +152,7 @@ func (c *nodeBurstController) processItem(key string) error {
 func (c *nodeBurstController) getPod(podName string) *v1.Pod {
 	pod, _ := c.podGetter.Pods("default").Get(podName, metav1.GetOptions{})
 
-	if (pod.Spec.SchedulerName == "test-scheduler") && (pod.Spec.NodeName == "") {
+	if (pod.Spec.SchedulerName == *schedulerName) && (pod.Spec.NodeName == "") {
 		return pod
 	}
 	return nil

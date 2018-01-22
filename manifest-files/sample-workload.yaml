@@ -9,7 +9,7 @@ spec:
       labels:
         app: aci-helloworld
     spec:
-      schedulerName: test-scheduler
+      schedulerName: burst-scheduler
       containers:
       - name: aci-helloworld
         image: microsoft/aci-helloworld

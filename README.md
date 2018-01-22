@@ -63,6 +63,7 @@ Arguments:
 
 | Argument | Type | Description |
 |---|---|---|
+| schedulerName | String | The name of the scheduler, this will match the named scheduler when deploying pods. The default value os burst-scheduler. |
 | burstNode | String | Node name of the burst node. This is the node on which pods are scheduled once the burstValue has been met. |
 | burstValue | Int | Value that controls how many pods will be scheduled on Kubernetes nodes vs. burst node. |
 | kubeConfig | Bool | Indicates that a kubernetes config file found at $KUBECONFIG is used for cluster discovery / auth. If not specified, it is assumed execution is occurring from a pod in the Kubernetes cluster. |
