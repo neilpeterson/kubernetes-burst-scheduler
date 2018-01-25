@@ -120,7 +120,7 @@ func (c *nodeBurstController) processItem(key string) error {
 		defaultScheduler := c.calculatePodPlacement(pod)
 
 		if defaultScheduler {
-			log.Printf("%s%s%s", "Scheduling pod", pod.GetName(), "using default scheduler.")
+			log.Printf("%s%s%s", "Scheduling pod", pod.GetName(), " using default scheduler.")
 
 			// Get node list
 			n, _ := c.listNodes()
@@ -132,7 +132,7 @@ func (c *nodeBurstController) processItem(key string) error {
 			schedulePod(pod.GetName(), randomNode)
 
 		} else {
-			log.Printf("%s%s%s", "Scheduling pod ", pod.GetName(), "on burst node.")
+			log.Printf("%s%s%s", "Scheduling pod ", pod.GetName(), " on burst node.")
 
 			// Validate burst nodes exsists
 			_, bn := c.listNodes()
@@ -151,8 +151,7 @@ func (c *nodeBurstController) processItem(key string) error {
 // Get a single pod by name
 func (c *nodeBurstController) getPod(podName string) *v1.Pod {
 	pod, _ := c.podGetter.Pods("default").Get(podName, metav1.GetOptions{})
-
-	if (pod.Spec.SchedulerName == *schedulerName) && (pod.Spec.NodeName == "") {
+	if (pod.Spec.SchedulerName == *schedulerName) && (pod.Spec.NodeName == "") && (pod.DeletionTimestamp == nil) {
 		return pod
 	}
 	return nil
@@ -161,23 +160,9 @@ func (c *nodeBurstController) getPod(podName string) *v1.Pod {
 // Determins if the burst node is needed
 func (c *nodeBurstController) calculatePodPlacement(pod *v1.Pod) bool {
 
-	var scheduled int
-	var track int
+	n, _ := c.getNodeWeight(pod.GetLabels()["app"])
 
-	// Get all pods with matching label
-	podLabel := pod.GetLabels()["app"]
-
-	// TODO - can I do this with the lister?
-	rawPODS, _ := c.podGetter.Pods("").List(metav1.ListOptions{LabelSelector: "app=" + podLabel})
-
-	// Calculate placement
-	for _, pod := range rawPODS.Items {
-		if pod.Spec.NodeName != "" {
-			scheduled++
-		}
-	}
-	track = *burstValue - scheduled
-	if track > 0 {
+	if len(n) < *burstValue {
 		// Default scheduler
 		return true
 	}

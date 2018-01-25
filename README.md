@@ -70,8 +70,6 @@ Arguments:
 
 ## TODO:
 
-**Terminating pods** – filter these from scope. Not a big issue but can be problematic during demos / quick turn-a-rounds.
-
 **Namespace** - currently 'default' is a non-configurable default. Update with a `--namespace` argument.
 
 **Default Scheduler** - Update pod updater to use default scheduler when not in burst. Currently a random node from all nodes - the burst node is chosen for scheduling. I am not able to patch the pod scheduler property value.
@@ -84,6 +82,6 @@ Arguments:
 
 https://github.com/kubernetes/kubernetes/issues/24913
 
-## Incubation?
+**Re-scheduler** - is it posiable to miss a node with a terminationGracePeriodSeconds = 0?
 
-**Pseudo Re-scheduler** - could solve the problem with bursting a deployment. As the replica count reaches burst value (on pod delete), check pod balance. if pods are scheduled on a burst node, stop pod, which should then be rescheduled on a node via the custom scheduler - perhaps?
+**Architectural diagram** - build something like this.
