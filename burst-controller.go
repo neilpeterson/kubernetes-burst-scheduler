@@ -52,7 +52,7 @@ func newNodeBurstController(client *kubernetes.Clientset, podInformer informerco
 	return c
 }
 
-// Start informer, build cache
+// Start informer, build cache.
 func (c *nodeBurstController) Run(stop <-chan struct{}) {
 	var wg sync.WaitGroup
 
@@ -83,13 +83,13 @@ func (c *nodeBurstController) Run(stop <-chan struct{}) {
 	log.Print("Recieved stop singnal")
 }
 
-// Start worker - watched queue, call processor
+// Start worker - watched queue, call processor.
 func (c *nodeBurstController) runWorker() {
 	for c.processNextWorkItem() {
 	}
 }
 
-// Pulls item from queue
+// Pull items from queue.
 func (c *nodeBurstController) processNextWorkItem() bool {
 
 	// Pull work item from queue.
@@ -99,7 +99,7 @@ func (c *nodeBurstController) processNextWorkItem() bool {
 	}
 	defer c.queue.Done(key)
 
-	// Process work item
+	// Process work items.
 	err := c.processItem(key.(string))
 	if err == nil {
 		c.queue.Forget(key)
@@ -108,7 +108,7 @@ func (c *nodeBurstController) processNextWorkItem() bool {
 	return true
 }
 
-// Process item - work starts here
+// Process item - work starts here.
 func (c *nodeBurstController) processItem(key string) error {
 
 	// Get pod, TODO - Update to use informer.GetIndexer().GetByKey(key)
@@ -116,29 +116,29 @@ func (c *nodeBurstController) processItem(key string) error {
 
 	if pod != nil {
 
-		// Determine if the burst node is needed
-		defaultScheduler := c.calculatePodPlacement(pod)
+		// Determine if the burst node is needed.
+		df := c.calculatePodPlacement(pod)
 
-		if defaultScheduler {
-			log.Printf("%s%s%s", "Scheduling pod", pod.GetName(), " using default scheduler.")
+		if df {
+			log.Printf("%s%s%s", "Scheduling pod", pod.GetName(), " on random node.")
 
-			// Get node list
+			// Get node list.
 			n, _ := c.listNodes()
 
-			// Get random node
-			randomNode := getRandomNode(n)
+			// Get random node.
+			rn := getRandomNode(n)
 
-			// Schedule pod on random node
-			schedulePod(pod.GetName(), randomNode)
+			// Schedule pod on random node.
+			schedulePod(pod.GetName(), rn)
 
 		} else {
 			log.Printf("%s%s%s", "Scheduling pod ", pod.GetName(), " on burst node.")
 
-			// Validate burst nodes exsists
+			// Validate burst nodes exsists.
 			_, bn := c.listNodes()
 
 			if bn {
-				// Schedule pod on random node
+				// Schedule pod on random node.
 				schedulePod(pod.GetName(), *burstNode)
 			} else {
 				log.Printf("%s%s%s", "Node: ", *burstNode, " can not be found.")
@@ -148,24 +148,24 @@ func (c *nodeBurstController) processItem(key string) error {
 	return nil
 }
 
-// Get a single pod by name
+// Get a single pod by name.
 func (c *nodeBurstController) getPod(podName string) *v1.Pod {
-	pod, _ := c.podGetter.Pods("default").Get(podName, metav1.GetOptions{})
+	pod, _ := c.podGetter.Pods(*namespace).Get(podName, metav1.GetOptions{})
 	if (pod.Spec.SchedulerName == *schedulerName) && (pod.Spec.NodeName == "") && (pod.DeletionTimestamp == nil) {
 		return pod
 	}
 	return nil
 }
 
-// Determins if the burst node is needed
+// Determine if the burst node is needed.
 func (c *nodeBurstController) calculatePodPlacement(pod *v1.Pod) bool {
 
 	n, _ := c.getNodeWeight(pod.GetLabels()["app"])
 
 	if len(n) < *burstValue {
-		// Default scheduler
+		// Default scheduler.
 		return true
 	}
-	// Burst node
+	// Burst node.
 	return false
 }

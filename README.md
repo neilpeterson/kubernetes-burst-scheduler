@@ -53,24 +53,17 @@ spec:
         args: ["--burstNode", "<node-name>", "--burstValue", "<integer>"]
 ```
 
-## Execution
-
-```
-burst-scheduler --burstNode virtual-kubelet-myaciconnector-linux --burstValue 10
-```
-
 Arguments:
 
 | Argument | Type | Description |
 |---|---|---|
-| schedulerName | String | The name of the scheduler, this will match the named scheduler when deploying pods. The default value os burst-scheduler. |
 | burstNode | String | Node name of the burst node. This is the node on which pods are scheduled once the burstValue has been met. |
 | burstValue | Int | Value that controls how many pods will be scheduled on Kubernetes nodes vs. burst node. |
+| namespace | String | Kubernetes namespace. |
 | kubeConfig | Bool | Indicates that a kubernetes config file found at $KUBECONFIG is used for cluster discovery / auth. If not specified, it is assumed execution is occurring from a pod in the Kubernetes cluster. |
+| schedulerName | String | The name of the scheduler, this will match the named scheduler when deploying pods. The default value os burst-scheduler. |
 
 ## TODO:
-
-**Namespace** - currently 'default' is a non-configurable default. Update with a `--namespace` argument.
 
 **Default Scheduler** - Update pod updater to use default scheduler when not in burst. Currently a random node from all nodes - the burst node is chosen for scheduling. I am not able to patch the pod scheduler property value.
 
@@ -81,7 +74,3 @@ Arguments:
 ```
 
 https://github.com/kubernetes/kubernetes/issues/24913
-
-**Re-scheduler** - is it posiable to miss a node with a terminationGracePeriodSeconds = 0?
-
-**Architectural diagram** - build something like this.

@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 )
@@ -42,17 +41,15 @@ func schedulePod(podName string, nodeName string) {
 
 	body, err := json.Marshal(pu)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 
-	// Assign pod to node.
-	// TODO - update to used go client method or rest client.
+	// Assign pod to node - crud, could not get this working with go client.
 	url := "http://localhost:8001/api/v1/namespaces/default/pods/" + podName + "/binding"
 	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(body))
 	req.Header.Add("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	_, err = http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
-	log.Println(resp.Status)
 }
