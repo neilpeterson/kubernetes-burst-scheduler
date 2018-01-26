@@ -2,6 +2,8 @@
 
 Simple scheduler that will burst workload to a named node after a specified number of related pods have been started.
 
+![](images/burst-scheduler.gif)
+
 ## Attribution
 
 This is my first go project and first exposure to the Kubernetes go client. Throughout, these two resources have been invaluable. Many thanks to the contributing teams.
