@@ -53,26 +53,17 @@ spec:
         args: ["--burstNode", "<node-name>", "--burstValue", "<integer>"]
 ```
 
-## Execution
-
-```
-burst-scheduler --burstNode virtual-kubelet-myaciconnector-linux --burstValue 10
-```
-
 Arguments:
 
 | Argument | Type | Description |
 |---|---|---|
-| schedulerName | String | The name of the scheduler, this will match the named scheduler when deploying pods. The default value os burst-scheduler. |
 | burstNode | String | Node name of the burst node. This is the node on which pods are scheduled once the burstValue has been met. |
 | burstValue | Int | Value that controls how many pods will be scheduled on Kubernetes nodes vs. burst node. |
+| namespace | String | Kubernetes namespace. |
 | kubeConfig | Bool | Indicates that a kubernetes config file found at $KUBECONFIG is used for cluster discovery / auth. If not specified, it is assumed execution is occurring from a pod in the Kubernetes cluster. |
+| schedulerName | String | The name of the scheduler, this will match the named scheduler when deploying pods. The default value os burst-scheduler. |
 
 ## TODO:
-
-**Terminating pods** – filter these from scope. Not a big issue but can be problematic during demos / quick turn-a-rounds.
-
-**Namespace** - currently 'default' is a non-configurable default. Update with a `--namespace` argument.
 
 **Default Scheduler** - Update pod updater to use default scheduler when not in burst. Currently a random node from all nodes - the burst node is chosen for scheduling. I am not able to patch the pod scheduler property value.
 
@@ -83,7 +74,3 @@ Arguments:
 ```
 
 https://github.com/kubernetes/kubernetes/issues/24913
-
-## Incubation?
-
-**Pseudo Re-scheduler** - could solve the problem with bursting a deployment. As the replica count reaches burst value (on pod delete), check pod balance. if pods are scheduled on a burst node, stop pod, which should then be rescheduled on a node via the custom scheduler - perhaps?
