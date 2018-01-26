@@ -61,7 +61,7 @@ kind: Deployment
 metadata:
   name: aci-helloworld
 spec:
-  replicas: 2
+  replicas: 5
   template:
     metadata:
       labels:
@@ -73,4 +73,8 @@ spec:
         image: microsoft/aci-helloworld
         ports:
         - containerPort: 80
+        resources:
+          requests:
+            memory: 1G
+            cpu: 250m
 ```
