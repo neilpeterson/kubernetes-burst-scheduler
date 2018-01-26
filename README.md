@@ -37,8 +37,6 @@ spec:
         args: ["--burstNode", "<node-name>", "--burstValue", "<integer>"]
 ```
 
-Arguments:
-
 The following arguments can be used when starting the scheduler.
 
 | Argument | Type | Description |
