@@ -14,4 +14,4 @@ spec:
         image: neilpeterson/kubectl-proxy-sidecar
       - name: burst-scheduler
         image: neilpeterson/burst-scheduler:v1
-        args: ["--burstNode", "<update with node>, "--burstValue", "5"]
+        args: ["--burstNode", "virtual-kubelet-virtual-kublet-linux", "--burstValue", "5"]
