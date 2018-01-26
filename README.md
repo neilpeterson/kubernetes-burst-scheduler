@@ -29,9 +29,9 @@ You would like to primarily run all jobs on the Kubernetes nodes, however when t
 
 With these desired results, the Kubernetes Burst Scheduler can be used to burst job 11, 12, ... to the `virtual-kubelet-myaciconnector-linux` node.
 
-## Deployment
+## Starting the scheduler
 
-The following manifest can be used to start the scheduler. Update `<node-name>` with the name of the burst node, and `<integer>` with the burst value. See the next section for details on all possible arguments.
+The following manifest can be used to start the scheduler. Update `<node-name>` with the name of the burst node, and `<integer>` with the burst value. See the arguments section for details on all possible arguments.
 
 ```yaml
 apiVersion: apps/v1beta1
@@ -55,6 +55,8 @@ spec:
 
 Arguments:
 
+The following arguments can be used when starting the scheduler.
+
 | Argument | Type | Description |
 |---|---|---|
 | burstNode | String | Node name of the burst node. This is the node on which pods are scheduled once the burstValue has been met. |
@@ -63,14 +65,30 @@ Arguments:
 | kubeConfig | Bool | Indicates that a kubernetes config file found at $KUBECONFIG is used for cluster discovery / auth. If not specified, it is assumed execution is occurring from a pod in the Kubernetes cluster. |
 | schedulerName | String | The name of the scheduler, this will match the named scheduler when deploying pods. The default value os burst-scheduler. |
 
-## TODO:
+## Pod configuration
 
-**Default Scheduler** - Update pod updater to use default scheduler when not in burst. Currently a random node from all nodes - the burst node is chosen for scheduling. I am not able to patch the pod scheduler property value.
+To manage burst scheduling across a set of related pods, two things need to be in place.
 
-**Pod node assignment** - Update this to use go client method, go client rest interface. Currently the node assignment is handled through direct api call (via kubectl proxy / sidecar). I was unable to use podInterface.update due to a non-updatable property (error below). Is there a way to complete through the go client, if not I see the that there is a REST interface, this is probably a better way to achieve this.
+-	Scheduler name – when using a custom scheduler, the scheduler name must be specified in the pod manifest. In the following example, a name is `burst-scheduler`. This is the default name of the burst scheduler. This name is configurable when starting the scheduler, see the section on starting the scheduler.
+-	App label – labels are used to group related pods for calculating weight and distribution. Currently the label must have a name of `app`. All pods that have this label will be grouped on the label value. In the following example the value of `aci-helloworld` is used to group and calculate pod placement. 
 
+
+```yaml
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: aci-helloworld
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: aci-helloworld
+    spec:
+      schedulerName: burst-scheduler
+      containers:
+      - name: aci-helloworld
+        image: microsoft/aci-helloworld
+        ports:
+        - containerPort: 80
 ```
-"aci-helloworld-4142002832-3l873" is invalid: spec: Forbidden: pod updates may not change fields other than `spec.containers[*].image`, `spec.initContainers[*].image`, `spec.activeDeadlineSeconds` or `spec.tolerations` (only additions to existing tolerations)
-```
-
-https://github.com/kubernetes/kubernetes/issues/24913
