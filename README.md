@@ -13,26 +13,6 @@ This is my first go project and first exposure to the Kubernetes go client. Thro
 - [Joe Beda controller sample](https://github.com/jbeda/tgik-controller)
 - [Tu Nguyen kubewatch example / blog](https://engineering.bitnami.com/articles/kubewatch-an-example-of-kubernetes-custom-controller.html)
 
-## Example use case:
-
-**Environment:**
-
-You have a Kubernetes cluster with three nodes. [Virtual Kublet](https://github.com/virtual-kubelet/virtual-kubelet) has been configured to present Azure Container Instances as a virtual node on the cluster. The cluster looks like this:
-
-```
-NAME                                   STATUS    ROLES     AGE       VERSION
-aks-nodepool1-34059843-0               Ready     agent     9h        v1.7.7
-aks-nodepool1-34059843-1               Ready     agent     9h        v1.7.7
-aks-nodepool1-34059843-2               Ready     agent     9h        v1.7.7
-virtual-kubelet-myaciconnector-linux   Ready     agent     2m        v1.8.3
-```
-
-A batch processing routine automatically starts Kubernetes jobs on the Kuebrentes. On average, less than 10 of these jobs are running at any given time. Occasionally an event occurs that temporarily increases this workload above 10 concurrent jobs. 
-
-You would like to primarily run all jobs on the Kubernetes nodes, however when the number of concurrent jobs increases above 10, these pods should be scheduled on Azure Container Instances by the virtual kublet.
-
-With these desired results, the Kubernetes Burst Scheduler can be used to burst job 11, 12, ... to the `virtual-kubelet-myaciconnector-linux` node.
-
 ## Starting the scheduler
 
 The following manifest can be used to start the scheduler. Update `<node-name>` with the name of the burst node, and `<integer>` with the burst value. See the arguments section for details on all possible arguments.
@@ -73,8 +53,8 @@ The following arguments can be used when starting the scheduler.
 
 To manage burst scheduling across a set of related pods, two things need to be in place.
 
--	Scheduler name – when using a custom scheduler, the scheduler name must be specified in the pod manifest. In the following example, a name is `burst-scheduler`. This is the default name of the burst scheduler. This name is configurable when starting the scheduler, see the section on starting the scheduler.
--	App label – labels are used to group related pods for calculating weight and distribution. Currently the label must have a name of `app`. All pods that have this label will be grouped on the label value. In the following example the value of `aci-helloworld` is used to group and calculate pod placement. 
+-	**Scheduler name** – when using a custom scheduler, the scheduler name must be specified in the pod manifest. In the following example, a name is `burst-scheduler`. This is the default name of the burst scheduler. This name is configurable when starting the scheduler, see the section on starting the scheduler.
+-	**App label** – labels are used to group related pods for calculating weight and distribution. Currently the label must have a name of `app`. All pods that have this label will be grouped on the label value. In the following example the value of `aci-helloworld` is used to group and calculate pod placement. 
 
 
 ```yaml
