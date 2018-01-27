@@ -2,7 +2,7 @@
 
 Simple scheduler that will burst workload to a named node after a specified number of related pods have been started.
 
-Short two minute demo – this is also available on [youtube.com](https://youtu.be/f5IeQR_i5CM), which may be easier to view from the beginning, pause, etc. 
+Short two minute demo – this is also available on [youtube.com](https://youtu.be/ixuz_4F8SW0), which may be easier to view from the beginning, pause, etc. 
 
 ![](images/burst-scheduler.gif)
 
