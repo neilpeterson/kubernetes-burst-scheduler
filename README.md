@@ -78,3 +78,9 @@ spec:
             memory: 1G
             cpu: 250m
 ```
+
+## Default scheduler issue
+
+Currently when the burst node is not chosen as the assigned node, a random node from the cluster (minus the burst node) is chose. I would rather use the default scheduler vs. random node.
+
+I am working on this problem in a different branch, here is an abstract on current thougths etc - [set default scheduler branch](https://github.com/neilpeterson/kubernetes-burst-scheduler/blob/default-scheduler/set-default-scheduler.md) .
