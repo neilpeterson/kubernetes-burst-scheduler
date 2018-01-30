@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"log"
-	"net/http"
 )
 
 type target struct {
@@ -24,7 +22,7 @@ type podUpdate struct {
 	Target     target   `json:"target"`
 }
 
-func schedulePod(podName string, nodeName string) {
+func (c *nodeBurstController) schedulePod(podName string, nodeName string) {
 
 	pu := &podUpdate{
 		APIVersion: "v1",
@@ -44,11 +42,9 @@ func schedulePod(podName string, nodeName string) {
 		log.Println(err)
 	}
 
-	// Assign pod to node - crud, could not get this working with go client.
-	url := "http://localhost:8001/api/v1/namespaces/default/pods/" + podName + "/binding"
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(body))
-	req.Header.Add("Content-Type", "application/json")
-	_, err = http.DefaultClient.Do(req)
+	uri := "http://kubernetes/api/v1/namespaces/default/pods/" + nodeName + "/binding"
+
+	err = c.rest.Post().RequestURI(uri).Body(body).Do().Error()
 	if err != nil {
 		log.Println(err)
 	}

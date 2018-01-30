@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/client-go/rest"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	informercorev1 "k8s.io/client-go/informers/core/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -24,6 +26,7 @@ type nodeBurstController struct {
 	podListerSynced cache.InformerSynced
 	queue           workqueue.RateLimitingInterface
 	nodes           corev1.NodesGetter
+	rest            rest.Interface
 }
 
 func newNodeBurstController(client *kubernetes.Clientset, podInformer informercorev1.PodInformer) *nodeBurstController {
@@ -34,6 +37,7 @@ func newNodeBurstController(client *kubernetes.Clientset, podInformer informerco
 		podListerSynced: podInformer.Informer().HasSynced,
 		queue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "secretsync"),
 		nodes:           client.CoreV1(),
+		rest:            client.RESTClient(),
 	}
 
 	podInformer.Informer().AddEventHandler(
@@ -129,7 +133,7 @@ func (c *nodeBurstController) processItem(key string) error {
 			rn := getRandomNode(n)
 
 			// Schedule pod on random node.
-			schedulePod(pod.GetName(), rn)
+			c.schedulePod(pod.GetName(), rn)
 
 		} else {
 			log.Printf("%s%s%s", "Scheduling pod ", pod.GetName(), " on burst node.")
@@ -139,7 +143,7 @@ func (c *nodeBurstController) processItem(key string) error {
 
 			if bn {
 				// Schedule pod on random node.
-				schedulePod(pod.GetName(), *burstNode)
+				c.schedulePod(pod.GetName(), *burstNode)
 			} else {
 				log.Printf("%s%s%s", "Node: ", *burstNode, " can not be found.")
 			}
