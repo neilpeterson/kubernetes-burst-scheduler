@@ -30,8 +30,6 @@ spec:
         app: burst-scheduler
     spec:
       containers:
-      - name: kubectl-sidecar
-        image: neilpeterson/kubectl-proxy-sidecar
       - name: burst-scheduler
         image: neilpeterson/burst-scheduler:v1
         args: ["--burstNode", "<node-name>", "--burstValue", "<integer>"]
