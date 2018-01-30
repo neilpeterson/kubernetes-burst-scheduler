@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 )
 
@@ -47,6 +46,6 @@ func (c *nodeBurstController) schedulePod(podName string, nodeName string) {
 
 	err = c.rest.Post().RequestURI(uri).Body(body).Do().Error()
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 }
