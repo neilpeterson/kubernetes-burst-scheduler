@@ -11,5 +11,5 @@ spec:
     spec:
       containers:
       - name: burst-scheduler
-        image: neilpeterson/burst-scheduler:v1
-        args: ["--burstNode", "virtual-kubelet-aci-linux", "--burstValue", "2"]
+        image: neilpeterson/burst-scheduler:v1.2
+        args: ["--burstNode", "virtual-kubelet-aci-linux", "--burstValue", "5"]

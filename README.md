@@ -15,7 +15,8 @@ This is my first go project and first exposure to the Kubernetes go client. Thro
 
 ## Starting the scheduler
 
-The following manifest can be used to start the scheduler. Update `<node-name>` with the name of the burst node, and `<integer>` with the burst value. See the arguments section for details on all possible arguments.
+The following manifest can be used to start the scheduler. The node name in this example is the name of the virtual kubelet node using a ACI provider in my AKS cluster. This can be updated to the name of any node in the cluster. The burst value is set for `5`, this can also be configured with any value.
+
 
 ```yaml
 apiVersion: apps/v1beta1
@@ -31,8 +32,8 @@ spec:
     spec:
       containers:
       - name: burst-scheduler
-        image: neilpeterson/burst-scheduler:v1
-        args: ["--burstNode", "<node-name>", "--burstValue", "<integer>"]
+        image: neilpeterson/burst-scheduler:v1.2
+        args: ["--burstNode", "virtual-kubelet-aci-linux", "--burstValue", "5"]
 ```
 
 The following arguments can be used when starting the scheduler.
